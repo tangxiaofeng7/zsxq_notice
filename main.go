@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 	"zsxq_notice/model"
 
@@ -31,16 +30,16 @@ func main() {
 
 	//计划任务
 	_, err := gcron.AddSingleton("* * * * * *", func() {
-		g.Log().Print("doing")
+		g.Log().Print("计划任务开始")
 		arr := g.Cfg().Get("zsxq_group").([]interface{})
 		for e := 0; e < len(arr); e++ {
 			for _, b := range arr[e].(map[string]interface{}) {
+				g.Log().Print("开始执行任务", "群组ID:", b)
 				Cyber(b.(string), zsxq_access_token, robot)
+				g.Log().Print("执行任务结束", "群组ID:", b)
 			}
 		}
-
-		time_value, _ := strconv.Atoi(g.Cfg().Get("time.value").(string))
-		time.Sleep(time.Duration(time_value) * time.Second)
+		time.Sleep(600 * time.Second)
 
 	})
 
@@ -83,7 +82,7 @@ func Cyber(group_id string, zsxq_access_token string, robot model.Robot) {
 			Item := array[i].(map[string]interface{})
 			create_time := Item["create_time"]
 			time1 := fmt.Sprintf("%s", create_time)
-			fmt.Println("第", i+1, "篇\n发布时间", strings.Replace(time1[:16], "T", " ", -1))
+			// fmt.Println("第", i+1, "篇\n发布时间", strings.Replace(time1[:16], "T", " ", -1))
 
 			a := Item["talk"]
 			b, _ := gjson.DecodeToJson(a)
@@ -95,45 +94,70 @@ func Cyber(group_id string, zsxq_access_token string, robot model.Robot) {
 			rs := []rune(abc)
 			//作者
 			author := b.Get("owner.name").String()
-			fmt.Println("作者", author)
 
 			list, err := g.DB().GetAll("select * from knowledge where message=?", string(rs[:10]))
 			if err != nil {
 				g.Log().Header(false).Fatal(err)
 			}
 			if list == nil {
-				fmt.Println("list is nil")
-				r, err := g.DB().Insert("knowledge", gdb.Map{
+				fmt.Println("开始插入数据库")
+				_, err := g.DB().Insert("knowledge", gdb.Map{
 					"message":     string(rs[:10]),
 					"name":        author,
 					"create_time": strings.Replace(time1[:16], "T", " ", -1),
 				})
 				if err != nil {
-					g.Log().Header(false).Fatal(err)
-				} else {
-					fmt.Println("插入成功", r)
+					g.Log().Fatal("插入数据库", err)
 				}
+				fmt.Println(author, "成功插入数据库")
+
+				time.Sleep(1 * time.Second)
+
 				//星球文章附件
 				array_file := b.Get("files").Array()
-				for j := 0; j < len(array_file); j++ {
-					Item_file := array_file[j].(map[string]interface{})
-					fmt.Println("附件", Item_file["name"].(string))
-					//企业微信人通知
+				if array_file == nil {
+					fmt.Println("robot", robot)
+
 					s := fmt.Sprintf(`
-				# <font color="info">知识星球发现新的内容</font>
+				# <font color="info">知识星球</font>
 				> <font color="info">内容</font>: %s
 				> <font color="info">作者</font>: %s
-				> <font color="info">附件</font>: %s
 				> <font color="info">发布时间</font>: %s
-	`, b.Get("text").String(), author, Item_file["name"].(string), strings.Replace(time1[:16], "T", " ", -1))
+	`, b.Get("text").String(), author, strings.Replace(time1[:16], "T", " ", -1))
 					res, _ := robot.SendMarkdown(s)
 					if res.ErrorCode != 0 {
-						fmt.Println(res.ErrorMessage)
+						g.Log().Print(robot)
+						g.Log().Fatal("企业微信机器人", res.ErrorMessage)
+					} else {
+						g.Log().Print("企业微信机器人发送成功")
+					}
+				} else {
+					fmt.Println("robot", robot)
+
+					for j := 0; j < len(array_file); j++ {
+						Item_file := array_file[j].(map[string]interface{})
+						g.Log().Print("附件", Item_file["name"].(string))
+						//企业微信人通知
+						s := fmt.Sprintf(`
+					# <font color="info">知识星球</font>
+					> <font color="info">内容</font>: %s
+					> <font color="info">作者</font>: %s
+					> <font color="info">附件</font>: %s
+					> <font color="info">发布时间</font>: %s
+		`, b.Get("text").String(), author, Item_file["name"].(string), strings.Replace(time1[:16], "T", " ", -1))
+						res, _ := robot.SendMarkdown(s)
+						if res.ErrorCode != 0 {
+							g.Log().Print(robot)
+							g.Log().Fatal("企业微信机器人", res.ErrorMessage)
+						} else {
+							g.Log().Print("企业微信机器人发送成功")
+						}
 					}
 				}
 			} else {
-				fmt.Println("数据库中已存在")
+				g.Log().Header(true).Print("group_id:", group_id, "author:", author, "数据库中已存在,不插入")
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}
 }

@@ -5,14 +5,11 @@ database:
     link:  "root:woaini520@tcp(mysql)/zsxq"
 
 wechat:
-    key:    "dc7d86c2-ce47-4aa7-9fa1-fef983574c35"
+    key:    "xxxxxxx-ce47-4aa7-9fa1-xxxxxx"
 
 zsxq_access_token:
-    token:    "DFD51610-752F-369F-1BC7-1287690C57B0_0DB9844681E50D10"
+    token:    "xxxxxxx-752F-369F-1BC7-1287690C57B0_xxxxxxxxxxx"
 
 zsxq_group:
-  - id: "88512188158852"
-  - id: "555848225184"
-
-time:
-  value: 3600
+  - id: "xxxxx"
+  - id: "xxxxxxxx"
