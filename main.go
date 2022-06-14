@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/os/gcron"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/encoding/gbase64"
 )
 
 type Knowledge struct {
@@ -94,6 +95,8 @@ func Cyber(group_id string, zsxq_access_token string, robot model.Robot) {
 			rs := []rune(abc)
 			//作者
 			author := b.Get("owner.name").String()
+			//编码作者，防止插入数据库报错
+			author_base := gbase64.EncodeString(author)
 
 			list, err := g.DB().GetAll("select * from knowledge where message=?", string(rs[:10]))
 			if err != nil {
@@ -103,13 +106,13 @@ func Cyber(group_id string, zsxq_access_token string, robot model.Robot) {
 				fmt.Println("开始插入数据库")
 				_, err := g.DB().Insert("knowledge", gdb.Map{
 					"message":     string(rs[:10]),
-					"name":        author,
+					"name":        author_base,
 					"create_time": strings.Replace(time1[:16], "T", " ", -1),
 				})
 				if err != nil {
 					g.Log().Fatal("插入数据库", err)
 				}
-				fmt.Println(author, "成功插入数据库")
+				fmt.Println(author_base, "成功插入数据库")
 
 				time.Sleep(1 * time.Second)
 
@@ -155,7 +158,7 @@ func Cyber(group_id string, zsxq_access_token string, robot model.Robot) {
 					}
 				}
 			} else {
-				g.Log().Header(true).Print("group_id:", group_id, "author:", author, "数据库中已存在,不插入")
+				g.Log().Header(true).Print("group_id:", group_id, "author:", author_base, "数据库中已存在,不插入")
 			}
 			time.Sleep(1 * time.Second)
 		}
