@@ -21,9 +21,10 @@ mysql_secure_installation
 ```
 
 #### 登陆 mysql 并导入 sql 文件
-
+```
 mysql -uroot -p
 source mysql/init.sql
+```
 
 #### 编辑配置文件
 
